@@ -1,0 +1,642 @@
+{# Candida albicans Physiology Educational Simulator #}
+{# Autor Igor Cadina #}
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔬 Simulador Candida Albicans</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+        }
+        
+        .scientific-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+        }
+        
+        .parameter-input {
+            transition: all 0.3s ease;
+        }
+        
+        .parameter-input:focus {
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            border-color: #6366f1;
+        }
+        
+        .info-badge {
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .optimal-range {
+            position: relative;
+        }
+        
+        .optimal-range::after {
+            content: 'ÓTIMO';
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10b981;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #ef4444 0%, #f59e0b 30%, #84cc16 70%, #10b981 100%);
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="py-8">
+    <div class="container mx-auto px-4 max-w-7xl">
+        <!-- Scientific Header -->
+        <header class="mb-10">
+            <div class="scientific-card p-8">
+                <div class="flex flex-col md:flex-row items-center justify-between">
+                    <div class="mb-6 md:mb-0">
+                        <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+                            <i class="fas fa-microscope text-indigo-600 mr-3"></i>
+                            Simulador Candida Albicans
+                        </h1>
+                        <p class="text-gray-600 text-lg">
+                            Modelo fisiológico
+                        </p>
+                    </div>
+                    <div class="flex flex-col items-end">
+                        <div class="flex space-x-3 mb-3">
+                            <span class="info-badge">
+                                <i class="fas fa-flask mr-1"></i>Versão Científica
+                            </span>
+                            <span class="info-badge bg-gradient-to-r from-emerald-500 to-green-500">
+                                <i class="fas fa-chart-line mr-1"></i>Parâmetros Reais
+                            </span>
+                        </div>
+                        <div class="text-sm text-gray-500 text-right">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Baseado em literatura revisada por pares
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Scientific References -->
+                <div class="mt-6 pt-6 border-t border-gray-100">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                        <i class="fas fa-book-open mr-2 text-indigo-500"></i>
+                        Referências Científicas Utilizadas:
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-600">
+                        <div>• Davis et al., 2000 - Faixas de pH e temperatura ótimas</div>
+                        <div>• Hornby et al., 2001 - Mecanismo de ação do farnesol</div>
+                        <div>• Lachke et al., 2002 - Cinética de crescimento microbiano</div>
+                        <div>• Lorenz et al., 2000 - Regulação da filamentação</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Error Message -->
+        {% if error_msg %}
+        <div class="mb-6 p-6 bg-gradient-to-r from-red-50 to-orange-50 border border-red-100 rounded-2xl animate-fade-in">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-2xl mr-4"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-red-800 mb-2">Condição Limite Detectada</h3>
+                    <p class="text-red-700">{{ error_msg }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Panel - Parameters -->
+            <div class="lg:col-span-1">
+                <div class="scientific-card p-6 sticky top-8">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                        <i class="fas fa-sliders-h text-indigo-600 mr-3"></i>
+                        Parâmetros Experimentais
+                    </h2>
+                    
+                    <form method="POST" class="space-y-6">
+                        <!-- Meio de Cultura -->
+                        <div class="space-y-3">
+                            <label class="block text-gray-700 font-semibold">
+                                <i class="fas fa-flask text-indigo-500 mr-2"></i>Meio de Cultura
+                            </label>
+                            <select name="meio" class="w-full p-3 parameter-input bg-gray-50 border border-gray-200 rounded-xl">
+                                {% for meio_op in opcoes_meio %}
+                                <option value="{{ meio_op }}" {% if meio_op == meio %}selected{% endif %}>
+                                    {{ meio_op }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% set meio_info = simulador.meios.get(meio) %}
+                            {% if meio_info %}
+                            <div class="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                                <div class="font-medium mb-1">{{ meio_info.descricao }}</div>
+                                <div class="flex items-center text-xs">
+                                    <span class="mr-3">
+                                        <i class="fas fa-balance-scale mr-1"></i>pH ótimo: <strong>{{ meio_info.ph_otimo }}</strong>
+                                    </span>
+                                    <span>
+                                        <i class="fas fa-chart-bar mr-1"></i>OD máximo: <strong>{{ meio_info.od_max }}</strong>
+                                    </span>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- pH -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <label class="text-gray-700 font-semibold">
+                                    <i class="fas fa-tint text-blue-500 mr-2"></i>pH
+                                </label>
+                                <div class="flex items-center">
+                                    <span class="text-2xl font-bold text-blue-600 mr-2">{{ "%.1f"|format(ph) }}</span>
+                                    {% if parametros %}
+                                        {% if ph >= parametros.ph.min and ph <= parametros.ph.max %}
+                                        {% else %}
+                                            <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
+                                                <i class="fas fa-times mr-1"></i>Extremo
+                                            </span>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <input type="range" name="ph" min="1" max="14" step="0.1" value="{{ ph }}"
+                                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            <div class="flex justify-between text-xs text-gray-500 relative pt-4">
+                                <span class="text-red-600">Ácido 1.0</span>
+                                <span class="absolute left-1/4 top-0 text-blue-600 font-medium">4.0</span>
+                                <span class="absolute left-1/2 transform -translate-x-1/2 top-0 text-green-600 font-bold optimal-range">6.5</span>
+                                <span class="absolute left-3/4 top-0 text-blue-600 font-medium">9.0</span>
+                                <span class="text-red-600">Alcalino 14.0</span>
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Faixa viável: {{ parametros.ph.min if parametros else 4.0 }} - {{ parametros.ph.max if parametros else 9.0 }}
+                            </div>
+                        </div>
+
+                        <!-- Temperatura -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <label class="text-gray-700 font-semibold">
+                                    <i class="fas fa-thermometer-half text-red-500 mr-2"></i>Temperatura (°C)
+                                </label>
+                                <div class="flex items-center">
+                                    <span class="text-2xl font-bold text-red-600 mr-2">{{ "%.1f"|format(temp) }}°C</span>
+                                    {% if parametros %}
+                                        {% if temp >= parametros.temperatura.min and temp <= parametros.temperatura.max %}
+                                        {% else %}
+                                            <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
+                                                <i class="fas fa-times mr-1"></i>Extremo
+                                            </span>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <input type="range" name="temperatura" min="0" max="60" step="0.1" value="{{ temp }}"
+                                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            <div class="flex justify-between text-xs text-gray-500 relative pt-4">
+                                <span class="text-blue-600">0°C</span>
+                                <span class="absolute left-1/4 top-0 text-gray-600">20°C</span>
+                                <span class="absolute left-1/2 transform -translate-x-1/2 top-0 text-green-600 font-bold optimal-range">37°C</span>
+                                <span class="absolute left-3/4 top-0 text-gray-600">45°C</span>
+                                <span class="text-red-600">60°C</span>
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Crescimento: {{ parametros.temperatura.min if parametros else 20.0 }}°C - {{ parametros.temperatura.max if parametros else 45.0 }}°C
+                            </div>
+                        </div>
+
+                        <!-- Farnesol -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <label class="text-gray-700 font-semibold">
+                                    <i class="fas fa-vial text-purple-500 mr-2"></i>Farnesol (μM)
+                                </label>
+                                <div class="flex items-center">
+                                    <span class="text-2xl font-bold text-purple-600 mr-2">{{ "%.1f"|format(farnesol) }}</span>
+                                    {% if farnesol > 5.0 %}
+                                        <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                                            <i class="fas fa-exclamation mr-1"></i>Ativo
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <input type="range" name="farnesol" min="0" max="100" step="0.1" value="{{ farnesol }}"
+                                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            <div class="flex justify-between text-xs text-gray-500">
+                                <span>0 μM</span>
+                                <span class="text-purple-600 font-medium">10 μM</span>
+                                <span class="text-red-600">50 μM</span>
+                                <span>100 μM</span>
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                IC₅₀ hifas: {{ parametros.farnesol.inibicao_hifas if parametros else 10.0 }} μM | IC₅₀ crescimento: {{ parametros.farnesol.inibicao_crescimento if parametros else 50.0 }} μM
+                            </div>
+                        </div>
+
+                        <!-- Condições Iniciais -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-2">
+                                <label class="text-gray-700 font-semibold">OD Inicial</label>
+                                <div class="relative">
+                                    <input type="number" name="od_inicial" step="0.001" min="0.001" max="1" value="{{ od_inicial }}"
+                                           class="w-full p-3 parameter-input bg-gray-50 border border-gray-200 rounded-xl">
+                                    <div class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                        <i class="fas fa-weight-hanging"></i>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    Típico: 0.05 (inóculo 1:100)
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-gray-700 font-semibold">Tempo (h)</label>
+                                <div class="relative">
+                                    <input type="number" name="horas" step="1" min="1" max="168" value="{{ horas }}"
+                                           class="w-full p-3 parameter-input bg-gray-50 border border-gray-200 rounded-xl">
+                                    <div class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    Curva completa: 24-48h
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botão de Simulação -->
+                        <button type="submit"
+                                class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg flex items-center justify-center group">
+                            <i class="fas fa-play-circle text-xl mr-3 group-hover:scale-110 transition-transform"></i>
+                            <span class="text-lg">EXECUTAR SIMULAÇÃO CIENTÍFICA</span>
+                        </button>
+                    </form>
+
+                    <!-- Informações Técnicas -->
+                    <div class="mt-8 pt-6 border-t border-gray-100">
+                        <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                            <i class="fas fa-clipboard-check text-indigo-500 mr-2"></i>
+                            Informações Técnicas
+                        </h4>
+                        <div class="space-y-2 text-sm text-gray-600">
+                            <div class="flex items-center">
+                                <i class="fas fa-ruler-combined text-gray-400 mr-2 w-4"></i>
+                                <span>OD600: Densidade óptica a 600nm</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-calculator text-gray-400 mr-2 w-4"></i>
+                                <span>μ: Taxa específica de crescimento (h⁻¹)</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-divide text-gray-400 mr-2 w-4"></i>
+                                <span>t_d: Tempo de duplicação = ln(2)/μ</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-chart-curve text-gray-400 mr-2 w-4"></i>
+                                <span>Modelo: Crescimento logístico de Monod</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Results -->
+            <div class="lg:col-span-2">
+                {% if image_data %}
+                <!-- Results Container -->
+                <div class="space-y-8">
+                    <!-- Gráfico de Crescimento -->
+                    <div class="scientific-card p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-800 mb-1">Cinética de Crescimento</h2>
+                                <p class="text-gray-600 text-sm">Curva teórica baseada em parâmetros fisiológicos</p>
+                            </div>
+                            <div class="flex space-x-3">
+                                <div class="text-right">
+                                    <div class="text-2xl font-bold text-gray-900">{{ "%.3f"|format(pop_final) }}</div>
+                                    <div class="text-xs text-gray-500">OD Final</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-2xl font-bold text-gray-900">
+                                        {% if t_dup == float('inf') %}
+                                            ∞
+                                        {% else %}
+                                            {{ "%.1f"|format(t_dup) }}h
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-xs text-gray-500">t_d</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-4 rounded-xl mb-6">
+                            <img src="data:image/png;base64,{{ image_data }}" 
+                                 class="w-full rounded-lg" 
+                                 alt="Curva de crescimento cinético">
+                        </div>
+                        
+                        <!-- Estado do Crescimento -->
+                        <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3
+                                    {% if 'Exponencial' in estado %}bg-green-100 text-green-600
+                                    {% elif 'Linear' in estado %}bg-yellow-100 text-yellow-600
+                                    {% elif 'Lento' in estado %}bg-orange-100 text-orange-600
+                                    {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                    <i class="fas fa-seedling"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-gray-800">{{ estado }}</div>
+                                    <div class="text-sm text-gray-600">Fase predominante de crescimento</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm text-gray-500">Eficiência metabólica</div>
+                                <div class="text-2xl font-bold text-indigo-600">
+                                    {% if scores and 'Atividade Ribossomal' in scores %}
+                                        {{ (scores['Atividade Ribossomal'] * 100)|round(1) }}%
+                                    {% else %}
+                                        0%
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Diagnósticos -->
+                    <div class="scientific-card p-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                            <i class="fas fa-stethoscope text-red-500 mr-3"></i>
+                            Análise Fisiológica
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            {% for diagnostico in diagnosticos %}
+                            <div class="flex items-start p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                <div class="text-xl mr-3 mt-1">
+                                    {% if '✅' in diagnostico %}<span class="text-green-500">✅</span>
+                                    {% elif '📈' in diagnostico %}<span class="text-blue-500">📈</span>
+                                    {% elif '🐌' in diagnostico %}<span class="text-yellow-500">🐌</span>
+                                    {% elif '🔄' in diagnostico %}<span class="text-purple-500">🔄</span>
+                                    {% elif '🌱' in diagnostico %}<span class="text-emerald-500">🌱</span>
+                                    {% elif '🟡' in diagnostico %}<span class="text-yellow-500">🟡</span>
+                                    {% elif '🔵' in diagnostico %}<span class="text-blue-500">🔵</span>
+                                    {% elif '⚪' in diagnostico %}<span class="text-gray-500">⚪</span>
+                                    {% elif '🧪' in diagnostico %}<span class="text-indigo-500">🧪</span>
+                                    {% elif '🔥' in diagnostico %}<span class="text-red-500">🔥</span>
+                                    {% elif '⚠️' in diagnostico %}<span class="text-orange-500">⚠️</span>
+                                    {% elif '🌡️' in diagnostico %}<span class="text-red-500">🌡️</span>
+                                    {% elif '⚗️' in diagnostico %}<span class="text-cyan-500">⚗️</span>
+                                    {% elif '🧫' in diagnostico %}<span class="text-gray-500">🧫</span>
+                                    {% elif '⚡' in diagnostico %}<span class="text-green-500">⚡</span>
+                                    {% elif '📊' in diagnostico %}<span class="text-blue-500">📊</span>
+                                    {% elif '🔬' in diagnostico %}<span class="text-blue-500">🔬</span>
+                                    {% elif '🟢' in diagnostico %}<span class="text-green-500">🟢</span>
+                                    {% elif '❄️' in diagnostico %}<span class="text-blue-500">❄️</span>
+                                    {% else %}<span class="text-gray-500">•</span>{% endif %}
+                                </div>
+                                <div>
+                                    <p class="text-gray-800">
+                                        {{ diagnostico.replace('✅', '').replace('📈', '').replace('🐌', '').replace('🔄', '').replace('🌱', '').replace('🟡', '').replace('🔵', '').replace('⚪', '').replace('🧪', '').replace('🔥', '').replace('⚠️', '').replace('🌡️', '').replace('⚗️', '').replace('🧫', '').replace('⚡', '').replace('📊', '').replace('🔬', '').replace('🟢', '').replace('❄️', '')|trim }}
+                                    </p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Scores Fisiológicos -->
+                    {% if scores %}
+                    <div class="scientific-card p-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                            <i class="fas fa-chart-network text-indigo-500 mr-3"></i>
+                            Perfil Metabólico Detalhado
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% for nome, valor in scores.items() %}
+                            {% set porcentagem = (valor * 100)|round(1) %}
+                            {% set valor_formatado = "%.3f"|format(valor) %}
+                            
+                            {% if nome == 'Via MAPK Hog1' %}
+                                {% if valor > 0.7 %}
+                                    {% set cor = 'from-red-50 to-orange-50' %}
+                                    {% set cor_text = 'text-red-700' %}
+                                    {% set cor_bar = 'bg-red-500' %}
+                                    {% set icon = 'fa-exclamation-triangle' %}
+                                {% elif valor > 0.5 %}
+                                    {% set cor = 'from-orange-50 to-yellow-50' %}
+                                    {% set cor_text = 'text-orange-700' %}
+                                    {% set cor_bar = 'bg-orange-500' %}
+                                    {% set icon = 'fa-exclamation-circle' %}
+                                {% elif valor > 0.3 %}
+                                    {% set cor = 'from-yellow-50 to-green-50' %}
+                                    {% set cor_text = 'text-yellow-700' %}
+                                    {% set cor_bar = 'bg-yellow-500' %}
+                                    {% set icon = 'fa-info-circle' %}
+                                {% elif valor > 0.1 %}
+                                    {% set cor = 'from-blue-50 to-cyan-50' %}
+                                    {% set cor_text = 'text-blue-700' %}
+                                    {% set cor_bar = 'bg-blue-500' %}
+                                    {% set icon = 'fa-info-circle' %}
+                                {% else %}
+                                    {% set cor = 'from-gray-50 to-gray-100' %}
+                                    {% set cor_text = 'text-gray-700' %}
+                                    {% set cor_bar = 'bg-gray-500' %}
+                                    {% set icon = 'fa-check-circle' %}
+                                {% endif %}
+                            {% else %}
+                                {% if valor > 0.8 %}
+                                    {% set cor = 'from-emerald-50 to-green-50' %}
+                                    {% set cor_text = 'text-emerald-700' %}
+                                    {% set cor_bar = 'bg-emerald-500' %}
+                                    {% set icon = 'fa-check-circle' %}
+                                {% elif valor > 0.6 %}
+                                    {% set cor = 'from-green-50 to-emerald-50' %}
+                                    {% set cor_text = 'text-green-700' %}
+                                    {% set cor_bar = 'bg-green-500' %}
+                                    {% set icon = 'fa-check-circle' %}
+                                {% elif valor > 0.4 %}
+                                    {% set cor = 'from-yellow-50 to-amber-50' %}
+                                    {% set cor_text = 'text-yellow-700' %}
+                                    {% set cor_bar = 'bg-yellow-500' %}
+                                    {% set icon = 'fa-exclamation-circle' %}
+                                {% elif valor > 0.2 %}
+                                    {% set cor = 'from-orange-50 to-red-50' %}
+                                    {% set cor_text = 'text-orange-700' %}
+                                    {% set cor_bar = 'bg-orange-500' %}
+                                    {% set icon = 'fa-exclamation-triangle' %}
+                                {% else %}
+                                    {% set cor = 'from-red-50 to-pink-50' %}
+                                    {% set cor_text = 'text-red-700' %}
+                                    {% set cor_bar = 'bg-red-500' %}
+                                    {% set icon = 'fa-times-circle' %}
+                                {% endif %}
+                            {% endif %}
+                            
+                            <div class="bg-gradient-to-r {{ cor }} p-4 rounded-xl border border-gray-100">
+                                <div class="flex justify-between items-center mb-2">
+                                    <div class="flex items-center">
+                                        <i class="fas {{ icon }} {{ cor_text }} mr-2"></i>
+                                        <span class="font-bold {{ cor_text }}">{{ nome }}</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-2xl font-bold {{ cor_text }}">{{ porcentagem }}%</div>
+                                        <div class="text-xs text-gray-500">{{ valor_formatado }}</div>
+                                    </div>
+                                </div>
+                                <div class="mb-1">
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="progress-bar h-2 rounded-full {{ cor_bar }}" 
+                                             style="width: {{ porcentagem }}%"></div>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-500">
+                                    <span>0.0</span>
+                                    <span>0.5</span>
+                                    <span>1.0</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <!-- Placeholder Científico -->
+                <div class="scientific-card p-12 text-center">
+                    <div class="max-w-2xl mx-auto">
+                        <div class="w-24 h-24 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-flask text-indigo-500 text-4xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-4">Simulação Científica</h3>
+                        <p class="text-gray-600 mb-8">
+                            Configure os parâmetros experimentais de acordo com protocolos científicos.
+                            Os valores padrão representam condições ótimas para crescimento de Candida albicans.
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="p-4 bg-gray-50 rounded-lg">
+                                <div class="text-lg font-bold text-indigo-600 mb-1">pH 6.5</div>
+                                <div class="text-sm text-gray-600">Ótimo fisiológico</div>
+                            </div>
+                            <div class="p-4 bg-gray-50 rounded-lg">
+                                <div class="text-lg font-bold text-indigo-600 mb-1">37°C</div>
+                                <div class="text-sm text-gray-600">Temperatura corporal</div>
+                            </div>
+                            <div class="p-4 bg-gray-50 rounded-lg">
+                                <div class="text-lg font-bold text-indigo-600 mb-1">YPD</div>
+                                <div class="text-sm text-gray-600">Meio rico padrão</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Footer Científico -->
+        <footer class="mt-12 pt-8 border-t border-gray-200">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">Simulador Candida Albicans</h3>
+                    <p class="text-gray-600 text-sm">Ferramenta educacional baseada em modelos científicos</p>
+                </div>
+                <div class="text-gray-500 text-sm text-center md:text-right">
+                    <p class="mb-1">
+                        <i class="fas fa-graduation-cap mr-1"></i>Para fins educacionais e de pesquisa
+                    </p>
+                    <p>
+                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                        Dados teóricos - Consulte literatura para valores experimentais
+                    </p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- JavaScript para atualização em tempo real -->
+    <script>
+        // Atualizar valores dos sliders
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            const display = slider.closest('.space-y-3')?.querySelector('.text-2xl');
+            if (display) {
+                slider.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    if (slider.name === 'temperatura') {
+                        display.textContent = value.toFixed(1) + '°C';
+                    } else if (slider.name === 'farnesol') {
+                        display.textContent = value.toFixed(1);
+                    } else {
+                        display.textContent = value.toFixed(1);
+                    }
+                });
+            }
+        });
+
+        // Efeito de digitação para o título
+        const title = document.querySelector('h1');
+        if (title && !title.dataset.animated) {
+            title.dataset.animated = true;
+            const originalText = title.textContent;
+            title.textContent = '';
+            
+            let i = 0;
+            function typeWriter() {
+                if (i < originalText.length) {
+                    title.textContent += originalText.charAt(i);
+                    i++;
+                    setTimeout(typeWriter, 30);
+                }
+            }
+            
+            setTimeout(typeWriter, 300);
+        }
+    </script>
+</body>
+</html>
